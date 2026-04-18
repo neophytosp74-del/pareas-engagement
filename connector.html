@@ -49,23 +49,30 @@
         },
         text: 'Engagement Letter',
         callback: function (t) {
-          // Capture the card context BEFORE opening the modal and pass it through
-          // as modal args. This survives iframe reloads and guarantees the modal
-          // knows which card it belongs to.
-          return t.card('id','name','desc','idBoard').then(function (card) {
+          // Open the modal. Try to capture small card context (id, name, board)
+          // and pass via args — but NEVER pass card.desc, it can be huge and would
+          // exceed Trello's modal-args size limit, silently blocking the modal open.
+          // If the .card() call fails for any reason, open the modal anyway and
+          // let the iframe resolve the card on its own.
+          var openModal = function (args) {
             return t.modal({
               url: ENGAGEMENT_URL,
               title: '📋 Engagement Letter — Pareas Consulting',
               accentColor: '#c8a96e',
               fullscreen: true,
-              args: {
-                source: 'card-button',
-                cardId:  card.id,
-                cardName: card.name,
-                cardDesc: card.desc,
-                boardId: card.idBoard
-              }
+              args: args || { source: 'card-button' }
             });
+          };
+          return t.card('id','name','idBoard').then(function (card) {
+            return openModal({
+              source: 'card-button',
+              cardId:  card.id,
+              cardName: (card.name || '').slice(0, 200),
+              boardId: card.idBoard
+            });
+          }).catch(function (err) {
+            console.warn('[Pareas] t.card failed, opening modal without args:', err);
+            return openModal();
           });
         },
         condition: 'edit'
@@ -99,21 +106,26 @@
           text: fmtEur(eng.total) + (eng.date ? '  ·  ' + eng.date : ''),
           color: 'yellow',
           callback: function (t) {
-            return t.card('id','name','desc','idBoard').then(function (card) {
+            var openModal = function (args) {
               return t.modal({
                 url: ENGAGEMENT_URL,
                 title: '📋 Engagement Letter — Pareas Consulting',
                 accentColor: '#c8a96e',
                 fullscreen: true,
-                args: {
-                  source: 'detail-badge',
-                  existing: eng,
-                  cardId:  card.id,
-                  cardName: card.name,
-                  cardDesc: card.desc,
-                  boardId: card.idBoard
-                }
+                args: args
               });
+            };
+            return t.card('id','name','idBoard').then(function (card) {
+              return openModal({
+                source: 'detail-badge',
+                existing: eng,
+                cardId:  card.id,
+                cardName: (card.name || '').slice(0, 200),
+                boardId: card.idBoard
+              });
+            }).catch(function (err) {
+              console.warn('[Pareas] t.card failed, opening modal without args:', err);
+              return openModal({ source: 'detail-badge', existing: eng });
             });
           }
         }];

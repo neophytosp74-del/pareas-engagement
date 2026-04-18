@@ -451,14 +451,14 @@ async function initTrello() {
     trelloT = TrelloPowerUp.iframe({ appKey: '', appName: 'Pareas Engagement' });
 
     // PRIMARY: read the card info passed via modal args (set by connector.html).
-    // This is the most reliable source — survives iframe reloads.
+    // Only id/name/board come through args — desc is fetched via REST at attach
+    // time to stay fresh and avoid exceeding modal-args size limits.
     let card = null;
     try {
       const cardId   = trelloT.arg('cardId');
       const cardName = trelloT.arg('cardName');
-      const cardDesc = trelloT.arg('cardDesc');
       const boardId  = trelloT.arg('boardId');
-      if (cardId) card = {id: cardId, name: cardName || '', desc: cardDesc || '', idBoard: boardId || ''};
+      if (cardId) card = {id: cardId, name: cardName || '', idBoard: boardId || ''};
     } catch(e) { console.warn('arg read failed', e); }
 
     // FALLBACK 1: ask the SDK directly
@@ -575,9 +575,18 @@ async function attachToTrelloCard() {
     }).then(r => r.json());
     if (!att || !att.id) throw new Error('Attachment failed: ' + JSON.stringify(att));
 
-    // 3) Update card description with structured summary (replaces any existing engagement block)
+    // 3) Fetch the current card description via REST (fresh, not stale)
+    let existingDesc = '';
+    try {
+      const cardResp = await fetch(`https://api.trello.com/1/cards/${cardId}?fields=desc&key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`);
+      if (cardResp.ok) {
+        const cardData = await cardResp.json();
+        existingDesc = cardData.desc || '';
+      }
+    } catch(e) { console.warn('fetch desc failed, continuing with empty:', e); }
+
+    // Update card description with structured summary (replaces any existing engagement block)
     const summary = buildCardDescription(d, att);
-    const existingDesc = trelloCard?.desc || '';
     const cleaned = existingDesc.replace(/<!--PAREAS_ENGAGEMENT-->[\s\S]*?<!--\/PAREAS_ENGAGEMENT-->\s*/g, '');
     const newDesc = (cleaned.trim() ? cleaned.trim() + '\n\n' : '') + summary;
     await fetch(`https://api.trello.com/1/cards/${cardId}?key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`, {
@@ -585,7 +594,6 @@ async function attachToTrelloCard() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({desc: newDesc})
     });
-    trelloCard.desc = newDesc;
 
     // 4) Store compact summary for the badge
     await trelloT.set('card','shared','engagement', {
