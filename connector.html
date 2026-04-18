@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pareas Engagement — Trello Power-Up Connector</title>
+<!--
+  This file is the connector URL you register at trello.com/power-ups/admin.
+  Trello loads this invisibly to discover which capabilities your Power-Up implements.
+  The user never sees this page directly.
+-->
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
+<script>
+(function () {
+  // Resolve the base URL of wherever this connector is hosted, so the
+  // engagement iframe and icon work both at the repo root and in /subfolder/.
+  var BASE = (function () {
+    var u = new URL(window.location.href);
+    u.search = ''; u.hash = '';
+    u.pathname = u.pathname.replace(/connector\.html?$/, '');
+    return u.toString();
+  })();
+  var ENGAGEMENT_URL = BASE + 'engagement.html';
+  // Power-Up card button icon — must be a single-colour SVG (Trello tints it per theme).
+  // The full-colour PNG logo is used on the engagement letterhead, not on the Trello button.
+  var ICON_URL       = BASE + 'icon.svg';
+
+  // Helper: read stored engagement summary for this card.
+  // Stored under the Power-Up's scoped key 'shared' so it travels with the board.
+  function getEngagement(t) {
+    return t.get('card', 'shared', 'engagement');
+  }
+
+  function fmtEur(n) {
+    try { return '€' + Number(n || 0).toLocaleString('el-GR', {maximumFractionDigits: 0}); }
+    catch (e) { return '€' + (n || 0); }
+  }
+
+  window.TrelloPowerUp.initialize({
+
+    // ------------------------------------------------------------------
+    //  CARD BUTTON — appears on the back of every card
+    //  Click opens the full engagement creator in a Trello modal iframe.
+    // ------------------------------------------------------------------
+    'card-buttons': function (t, opts) {
+      return [{
+        icon: {
+          dark: ICON_URL,
+          light: ICON_URL
+        },
+        text: 'Engagement Letter',
+        callback: function (t) {
+          return t.modal({
+            url: ENGAGEMENT_URL,
+            title: '📋 Engagement Letter — Pareas Consulting',
+            accentColor: '#c8a96e',
+            fullscreen: true,
+            // args flow into the iframe as t.arg(...) for any pre-seeding later
+            args: { source: 'card-button' }
+          });
+        },
+        condition: 'edit'
+      }];
+    },
+
+    // ------------------------------------------------------------------
+    //  CARD BADGE — shown on the front of cards that have a saved letter
+    //  Pulls stored summary (total, date) from per-card plugin data.
+    // ------------------------------------------------------------------
+    'card-badges': function (t, opts) {
+      return getEngagement(t).then(function (eng) {
+        if (!eng || !eng.total) return [];
+        return [{
+          text: '📋 ' + fmtEur(eng.total),
+          color: 'yellow',
+          refresh: 60  // re-render every 60s to pick up updates
+        }];
+      });
+    },
+
+    // ------------------------------------------------------------------
+    //  CARD DETAIL BADGE — richer badge visible on the card back itself
+    //  so you can see the fee + click straight into the creator.
+    // ------------------------------------------------------------------
+    'card-detail-badges': function (t, opts) {
+      return getEngagement(t).then(function (eng) {
+        if (!eng || !eng.total) return [];
+        return [{
+          title: 'Engagement',
+          text: fmtEur(eng.total) + (eng.date ? '  ·  ' + eng.date : ''),
+          color: 'yellow',
+          callback: function (t) {
+            return t.modal({
+              url: ENGAGEMENT_URL,
+              title: '📋 Engagement Letter — Pareas Consulting',
+              accentColor: '#c8a96e',
+              fullscreen: true,
+              args: { source: 'detail-badge', existing: eng }
+            });
+          }
+        }];
+      });
+    },
+
+    // ------------------------------------------------------------------
+    //  AUTHORIZATION STATUS — tell Trello whether the user is set up.
+    //  We mark "authorized" when Trello REST API key+token are saved.
+    //  Not required but avoids confused-UI in some Trello clients.
+    // ------------------------------------------------------------------
+    'authorization-status': function (t, opts) {
+      return t.loadSecret('trello_token').then(function (tok) {
+        return { authorized: !!tok };
+      }).catch(function () { return { authorized: false }; });
+    },
+
+    'show-authorization': function (t, opts) {
+      return t.popup({
+        title: 'Pareas Engagement — Settings',
+        url: BASE + 'settings.html',
+        height: 520
+      });
+    }
+  });
+})();
+</script>
+</head>
+<body>
+<!-- Trello loads this iframe hidden. Content here is never shown to users. -->
+<p style="font-family:sans-serif;color:#666;padding:14px;">
+Pareas Consulting · Engagement Letter Power-Up · connector endpoint.
+</p>
+</body>
+</html>
