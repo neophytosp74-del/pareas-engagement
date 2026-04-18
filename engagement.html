@@ -449,17 +449,49 @@ async function initTrello() {
   document.body.classList.add('trello');
   try {
     trelloT = TrelloPowerUp.iframe({ appKey: '', appName: 'Pareas Engagement' });
-    // Pre-fill client name from card title
-    const card = await trelloT.card('id','name','desc','idBoard');
-    trelloCard = card;
-    const cn = document.getElementById('f_client');
-    if (cn && !cn.value) {
-      // strip any leading bullet / emoji from card title
-      cn.value = (card.name || '').replace(/^[\u2022\u25CF\-\s]+/, '').trim();
+
+    // PRIMARY: read the card info passed via modal args (set by connector.html).
+    // This is the most reliable source — survives iframe reloads.
+    let card = null;
+    try {
+      const cardId   = trelloT.arg('cardId');
+      const cardName = trelloT.arg('cardName');
+      const cardDesc = trelloT.arg('cardDesc');
+      const boardId  = trelloT.arg('boardId');
+      if (cardId) card = {id: cardId, name: cardName || '', desc: cardDesc || '', idBoard: boardId || ''};
+    } catch(e) { console.warn('arg read failed', e); }
+
+    // FALLBACK 1: ask the SDK directly
+    if (!card) {
+      try { card = await trelloT.card('id','name','desc','idBoard'); }
+      catch(e) { console.warn('t.card() failed', e); }
     }
-    // Restore any previously-saved engagement data for this card
-    const existing = await trelloT.get('card', 'shared', 'engagement');
-    if (existing) restoreFromTrello(existing);
+
+    // FALLBACK 2: use getContext().card (synchronous; always works if scoped)
+    if (!card || !card.id) {
+      try {
+        const ctx = trelloT.getContext();
+        if (ctx && ctx.card) card = {id: ctx.card, name: card?.name || '', desc: card?.desc || '', idBoard: ctx.board || ''};
+      } catch(e) { console.warn('getContext failed', e); }
+    }
+
+    trelloCard = card;
+    if (!card || !card.id) {
+      console.warn('Trello init: could not determine card context');
+      toast('⚠ Δεν βρέθηκε καρτέλα — κλείσε και ξανά άνοιξε');
+    } else {
+      console.info('Trello init: card found', card.id, card.name);
+      const cn = document.getElementById('f_client');
+      if (cn && !cn.value && card.name) {
+        cn.value = (card.name || '').replace(/^[\u2022\u25CF\-\s]+/, '').trim();
+      }
+      // Restore any previously-saved engagement data for this card
+      try {
+        const existing = await trelloT.get('card', 'shared', 'engagement');
+        if (existing) restoreFromTrello(existing);
+      } catch(e) { console.warn('restore failed', e); }
+    }
+
     // Resize iframe to fit content; re-run when UI changes
     trelloT.sizeTo(document.documentElement).catch(()=>{});
     const mo = new MutationObserver(() => trelloT.sizeTo(document.documentElement).catch(()=>{}));
@@ -467,6 +499,20 @@ async function initTrello() {
   } catch(e) {
     console.error('Trello init failed', e);
   }
+}
+
+// Resolve the current card ID by trying every source the SDK offers.
+// This is called at attach-time to be absolutely sure.
+async function resolveCardId() {
+  // 1) Previously captured during init
+  if (trelloCard && trelloCard.id) return trelloCard.id;
+  // 2) Modal arg
+  try { const a = trelloT.arg('cardId'); if (a) return a; } catch(e) {}
+  // 3) SDK async call
+  try { const c = await trelloT.card('id'); if (c && c.id) return c.id; } catch(e) {}
+  // 4) Synchronous context
+  try { const ctx = trelloT.getContext(); if (ctx && ctx.card) return ctx.card; } catch(e) {}
+  return null;
 }
 
 function restoreFromTrello(eng) {
@@ -501,8 +547,16 @@ async function attachToTrelloCard() {
   }
 
   const d = currentData;
-  const cardId = trelloCard?.id;
-  if (!cardId) return toast('❌ Δεν βρέθηκε η καρτέλα');
+  const cardId = await resolveCardId();
+  if (!cardId) {
+    console.error('resolveCardId returned null. trelloCard=', trelloCard, 'context=', (()=>{try{return trelloT.getContext();}catch{return 'err';}})());
+    trelloT.alert({
+      message: '❌ Δεν βρήκα την καρτέλα. Κλείσε αυτό το παράθυρο, άνοιξε ξανά την καρτέλα και πάτα Engagement Letter.',
+      duration: 7
+    });
+    return;
+  }
+  console.info('Attaching to card', cardId);
 
   // 2) Build the polished HTML file and upload as an attachment
   const filename = `Engagement_${(d.client||'Client').replace(/\s+/g,'_')}_${d.dateStr||'draft'}.html`;

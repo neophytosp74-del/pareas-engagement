@@ -49,13 +49,23 @@
         },
         text: 'Engagement Letter',
         callback: function (t) {
-          return t.modal({
-            url: ENGAGEMENT_URL,
-            title: '📋 Engagement Letter — Pareas Consulting',
-            accentColor: '#c8a96e',
-            fullscreen: true,
-            // args flow into the iframe as t.arg(...) for any pre-seeding later
-            args: { source: 'card-button' }
+          // Capture the card context BEFORE opening the modal and pass it through
+          // as modal args. This survives iframe reloads and guarantees the modal
+          // knows which card it belongs to.
+          return t.card('id','name','desc','idBoard').then(function (card) {
+            return t.modal({
+              url: ENGAGEMENT_URL,
+              title: '📋 Engagement Letter — Pareas Consulting',
+              accentColor: '#c8a96e',
+              fullscreen: true,
+              args: {
+                source: 'card-button',
+                cardId:  card.id,
+                cardName: card.name,
+                cardDesc: card.desc,
+                boardId: card.idBoard
+              }
+            });
           });
         },
         condition: 'edit'
@@ -89,12 +99,21 @@
           text: fmtEur(eng.total) + (eng.date ? '  ·  ' + eng.date : ''),
           color: 'yellow',
           callback: function (t) {
-            return t.modal({
-              url: ENGAGEMENT_URL,
-              title: '📋 Engagement Letter — Pareas Consulting',
-              accentColor: '#c8a96e',
-              fullscreen: true,
-              args: { source: 'detail-badge', existing: eng }
+            return t.card('id','name','desc','idBoard').then(function (card) {
+              return t.modal({
+                url: ENGAGEMENT_URL,
+                title: '📋 Engagement Letter — Pareas Consulting',
+                accentColor: '#c8a96e',
+                fullscreen: true,
+                args: {
+                  source: 'detail-badge',
+                  existing: eng,
+                  cardId:  card.id,
+                  cardName: card.name,
+                  cardDesc: card.desc,
+                  boardId: card.idBoard
+                }
+              });
             });
           }
         }];
