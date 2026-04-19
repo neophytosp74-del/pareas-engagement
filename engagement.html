@@ -193,6 +193,18 @@ body:not(.trello) .trello-only{display:none!important;}
 body.trello .standalone-only{display:none!important;}
 body.trello .layout{grid-template-columns:400px 1fr;}
 
+/* TRELLO MODE — lock height so internal panels scroll cleanly inside Trello's
+   fullscreen modal. Without this, the sidebar grows past the viewport and the
+   user cannot reach the fields or buttons below the fold. */
+body.trello,body.trello html{height:100%;overflow:hidden;}
+body.trello .layout{height:calc(100vh - 52px);min-height:0;overflow:hidden;}
+body.trello .sb{height:100%;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#c8a96e rgba(255,255,255,.05);}
+body.trello .sb::-webkit-scrollbar{width:10px;}
+body.trello .sb::-webkit-scrollbar-track{background:rgba(255,255,255,.04);}
+body.trello .sb::-webkit-scrollbar-thumb{background:rgba(200,169,110,.4);border-radius:5px;}
+body.trello .sb::-webkit-scrollbar-thumb:hover{background:rgba(200,169,110,.6);}
+body.trello .preview{height:100%;overflow-y:auto;}
+
 /* MODAL */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;align-items:center;justify-content:center;}
 .modal-bg.on{display:flex;}
