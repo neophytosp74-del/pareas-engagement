@@ -1498,7 +1498,7 @@ function cleanPhoneForWA(raw) {
 function defaultWAMessage() {
   const name  = (document.getElementById('f_client').value.trim() || 'πελάτη');
   const email = (document.getElementById('f_email').value.trim() || 'email σας');
-  return `Αγαπητέ/ή ${name},\n\nΣας έστειλα στο ${email} την Engagement Letter με τις υπηρεσίες και όρους της συνεργασίας μας. Παρακαλώ ελέγξτε το inbox σας (και τα spam).\n\nΕίμαι στη διάθεσή σας για οποιαδήποτε διευκρίνιση.\n\nΜε εκτίμηση,\nΝεόφυτος Παρέας\nPareas Consulting\n+357 25252700`;
+  return `Αγαπητέ/ή ${name},\n\nΣας απέστειλα με email στο ${email} αντίγραφο του Engagement Letter με τις υπηρεσίες και όρους της συνεργασίας μας. Παρακαλώ ελέγξτε το inbox του email σας ή τον φάκελο ανεπιθύμητης αλληλογραφίας (spam) — το αρχείο βρίσκεται στο email, όχι εδώ στο WhatsApp.\n\nΕίμαι στη διάθεσή σας για οποιαδήποτε διευκρίνιση.\n\nΜε εκτίμηση,\nΝεόφυτος Παρέας\nPareas Consulting\n+357 25252700`;
 }
 
 function openWhatsAppModal() {
