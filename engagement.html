@@ -341,8 +341,9 @@ body.trello .saved-view,body.trello .settings-view{height:calc(100vh - 52px);min
       <button class="pbn s" onclick="window.print()">🖨 Εκτύπωση</button>
       <button class="pbn s" onclick="dlHTML()">⬇ HTML</button>
       <button class="pbn" onclick="openEmailModal()">📧 Email</button>
-      <button class="pbn ok" onclick="sendTrello()">🗂 Trello</button>
-      <button class="pbn ok" style="background:#1a3a2a;" onclick="exportQB()">📊 QB IIF</button>
+      <button class="pbn ok trello-only" onclick="attachToTrelloCard()">🗂 Επισύναψη</button>
+      <button class="pbn ok standalone-only" onclick="sendTrello()">🗂 Trello</button>
+      <button class="pbn ok standalone-only" style="background:#1a3a2a;" onclick="exportQB()">📊 QB IIF</button>
     </div>
     <div id="doc-preview">
       <div class="doc"><div class="doc-wm">DRAFT</div>
