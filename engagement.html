@@ -330,6 +330,7 @@ body.trello .saved-view,body.trello .settings-view{height:calc(100vh - 52px);min
     <button class="btn-sec trello-only" onclick="attachToTrelloCard()" style="background:rgba(200,169,110,.18);border-color:var(--gold);color:var(--gold);">🗂 Επισύναψη στην Καρτέλα</button>
     <button class="btn-sec" onclick="saveDoc()">💾 Αποθήκευση (τοπικά)</button>
     <button class="btn-sec" onclick="openEmailModal()">📧 Αποστολή Email</button>
+    <button class="btn-sec" onclick="openWhatsAppModal()" style="background:rgba(37,211,102,.15);border-color:rgba(37,211,102,.4);color:#a8e8c0;">📱 Αποστολή WhatsApp</button>
     <button class="btn-sec standalone-only" onclick="sendTrello()">🗂 Καταχώρηση στο Trello</button>
     <button class="btn-sec" onclick="exportQB()">📊 Εξαγωγή QuickBooks IIF</button>
   </div>
@@ -417,6 +418,22 @@ body.trello .saved-view,body.trello .settings-view{height:calc(100vh - 52px);min
   </div>
 
   <button class="set-save" onclick="saveSettings()">💾 Αποθήκευση Ρυθμίσεων</button>
+</div>
+
+<!-- WHATSAPP MODAL -->
+<div class="modal-bg" id="wa-modal">
+  <div class="modal">
+    <h3>📱 Αποστολή WhatsApp στον πελάτη</h3>
+    <p style="color:#9aa8b8;font-size:.82rem;margin-bottom:10px;line-height:1.5;">Ανοίγει το WhatsApp (web ή app) με έτοιμο μήνυμα. Πατήστε <strong>Αποστολή</strong> μέσα στο WhatsApp για να σταλεί.</p>
+    <div class="grp"><label>Τηλέφωνο πελάτη (με διεθνή κωδικό)</label><input type="tel" id="wa_phone" placeholder="+357 99 ..."></div>
+    <div class="grp"><label>Μήνυμα</label>
+      <textarea id="wa_body" rows="8" style="background:rgba(255,255,255,.05);border:1px solid rgba(200,169,110,.22);border-radius:5px;color:#e8e0d0;padding:8px 10px;font-family:inherit;font-size:.84rem;outline:none;width:100%;resize:vertical;"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeModal('wa-modal')">Άκυρο</button>
+      <button class="mbtn-ok" style="background:#25d366;color:#fff;" onclick="sendWhatsApp()">📱 Άνοιγμα WhatsApp</button>
+    </div>
+  </div>
 </div>
 
 <!-- EMAIL MODAL -->
@@ -1192,7 +1209,7 @@ function generateDoc() {
   <div class="doc-hdr">
     <div>
       <img src="${LOGO_DATA_URI}" alt="Pareas Consulting" class="letter-logo">
-      <div class="co-sub" style="margin-top:6px;">Agias Marinas 5, Λεμεσός 3026, Κύπρος</div>
+      <div class="co-sub" style="margin-top:6px;">Eteokleous 2A, Limassol 3015, Cyprus</div>
     </div>
     <div class="co-contact">T: +357 25252700<br>M: +357 99818488<br>main@pareasconsulting.com<br>CySEC No. CN8068</div>
   </div>
@@ -1263,7 +1280,7 @@ function generateDoc() {
     </div>
   </div>
 
-  <div class="doc-foot">N. Pareas Critical Solutions Consulting Ltd | Agias Marinas 5, Λεμεσός 3026 | +357 25252700 | main@pareasconsulting.com</div>
+  <div class="doc-foot">N. Pareas Critical Solutions Consulting Ltd | Eteokleous 2A, Limassol 3015 | +357 25252700 | main@pareasconsulting.com</div>
 </div>`;
 
   currentDocHTML = html;
@@ -1461,6 +1478,46 @@ async function sendEmail() {
     console.error(e);
     toast('❌ Σφάλμα αποστολής: ' + (e.text||e.message||'άγνωστο'));
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// WHATSAPP (click-to-chat via wa.me)
+//   Opens WhatsApp with a pre-filled message. User clicks Send inside
+//   WhatsApp. No API, no cost, no signup.
+// ═══════════════════════════════════════════════════════════════════
+const WA_DEFAULT_CC = '357';  // Cyprus default
+
+function cleanPhoneForWA(raw) {
+  let p = String(raw||'').replace(/[^\d+]/g, '');
+  if (p.startsWith('+')) p = p.slice(1);
+  if (p.startsWith('00')) p = p.slice(2);
+  if (p.length > 0 && p.length <= 9) p = WA_DEFAULT_CC + p;
+  return p;
+}
+
+function defaultWAMessage() {
+  const name  = (document.getElementById('f_client').value.trim() || 'πελάτη');
+  const email = (document.getElementById('f_email').value.trim() || 'email σας');
+  return `Αγαπητέ/ή ${name},\n\nΣας έστειλα στο ${email} την Engagement Letter με τις υπηρεσίες και όρους της συνεργασίας μας. Παρακαλώ ελέγξτε το inbox σας (και τα spam).\n\nΕίμαι στη διάθεσή σας για οποιαδήποτε διευκρίνιση.\n\nΜε εκτίμηση,\nΝεόφυτος Παρέας\nPareas Consulting\n+357 25252700`;
+}
+
+function openWhatsAppModal() {
+  if (!currentData) generateDoc();
+  document.getElementById('wa_phone').value = document.getElementById('f_tel').value.trim();
+  document.getElementById('wa_body').value = defaultWAMessage();
+  document.getElementById('wa-modal').classList.add('on');
+}
+
+function sendWhatsApp() {
+  const phoneRaw = document.getElementById('wa_phone').value.trim();
+  const message  = document.getElementById('wa_body').value.trim();
+  if (!phoneRaw) return toast('⚠ Εισάγετε τηλέφωνο πελάτη');
+  const phone = cleanPhoneForWA(phoneRaw);
+  if (phone.length < 10) return toast('⚠ Μη έγκυρο τηλέφωνο — χρειάζεται διεθνής κωδικός');
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank', 'noopener');
+  closeModal('wa-modal');
+  toast('📱 Το WhatsApp άνοιξε σε νέα καρτέλα — πατήστε Αποστολή εκεί');
 }
 
 // ═══════════════════════════════════════════════════════════════════
