@@ -39,8 +39,13 @@ a{color:#c8a96e;}
 <script>
 var t = TrelloPowerUp.iframe();
 
-// Load existing values
-Promise.all([t.loadSecret('trello_key'), t.loadSecret('trello_token')]).then(function(vals){
+// Per-member private storage — each user sees only their own credentials.
+// Works reliably across all Trello SDK versions (older storeSecret only
+// supported ONE secret per Power-Up, which caused key+token to clobber).
+function getCred(name){ return t.get('member','private',name); }
+function setCred(name,val){ return t.set('member','private',name,val); }
+
+Promise.all([getCred('trello_key'), getCred('trello_token')]).then(function(vals){
   document.getElementById('key').value = vals[0] || '';
   document.getElementById('token').value = vals[1] || '';
   t.sizeTo('body');
@@ -49,23 +54,21 @@ Promise.all([t.loadSecret('trello_key'), t.loadSecret('trello_token')]).then(fun
 document.getElementById('save').onclick = function(){
   var k = document.getElementById('key').value.trim();
   var tok = document.getElementById('token').value.trim();
-  Promise.all([
-    t.storeSecret('trello_key', k),
-    t.storeSecret('trello_token', tok)
-  ]).then(function(){
+  Promise.all([setCred('trello_key', k), setCred('trello_token', tok)]).then(function(){
     t.alert({message:'✅ Αποθηκεύτηκαν', duration:3});
-    setTimeout(function(){ t.closePopup(); }, 600);
+    setTimeout(function(){ t.closePopup(); }, 700);
+  }).catch(function(e){
+    t.alert({message:'❌ ' + e.message, duration:5});
   });
 };
 
 document.getElementById('clear').onclick = function(){
-  Promise.all([
-    t.storeSecret('trello_key', ''),
-    t.storeSecret('trello_token', '')
-  ]).then(function(){
+  Promise.all([t.remove('member','private','trello_key'), t.remove('member','private','trello_token')]).then(function(){
     document.getElementById('key').value = '';
     document.getElementById('token').value = '';
     t.alert({message:'🗑 Καθαρίστηκαν', duration:2});
+  }).catch(function(e){
+    t.alert({message:'❌ ' + e.message, duration:5});
   });
 };
 </script>
