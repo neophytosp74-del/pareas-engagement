@@ -186,7 +186,9 @@ hr.sep{border:none;border-top:1px solid #e8e2da;margin:18px 0;}
 body.trello .hdr{padding:8px 16px;}
 body.trello .hdr-sub{display:none;}
 body.trello .hdr-logo{font-size:1rem;}
-body.trello .tabs{display:none;}
+/* Tabs ARE shown in Trello — users need access to Αποθηκευμένες & Ρυθμίσεις.
+   Just make them a bit smaller so they fit the compact header. */
+body.trello .tabs .tab{padding:4px 12px;font-size:.74rem;}
 body.trello .trello-badge{display:inline-block;background:#c8a96e;color:#0d1b2a;font-size:.7rem;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:10px;margin-left:10px;vertical-align:middle;}
 .trello-badge{display:none;}
 body:not(.trello) .trello-only{display:none!important;}
@@ -204,6 +206,8 @@ body.trello .sb::-webkit-scrollbar-track{background:rgba(255,255,255,.04);}
 body.trello .sb::-webkit-scrollbar-thumb{background:rgba(200,169,110,.4);border-radius:5px;}
 body.trello .sb::-webkit-scrollbar-thumb:hover{background:rgba(200,169,110,.6);}
 body.trello .preview{height:100%;overflow-y:auto;}
+/* Αποθηκευμένες & Ρυθμίσεις tabs need their own scroll when inside Trello */
+body.trello .saved-view,body.trello .settings-view{height:calc(100vh - 52px);min-height:0;overflow-y:auto;}
 
 /* MODAL */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;align-items:center;justify-content:center;}
@@ -545,18 +549,21 @@ async function attachToTrelloCard() {
   if (!currentDocHTML) generateDoc();
   if (!currentDocHTML) return toast('⚠ Συμπληρώστε στοιχεία πρώτα');
 
-  // 1) Need REST API creds for the attachment upload + desc update
+  // 1) Need REST API creds for the attachment upload + desc update.
+  // Uses per-member private storage — each user has their own key+token.
   const [key, token] = await Promise.all([
-    trelloT.loadSecret('trello_key').catch(()=>null),
-    trelloT.loadSecret('trello_token').catch(()=>null)
+    trelloT.get('member','private','trello_key').catch(()=>null),
+    trelloT.get('member','private','trello_token').catch(()=>null)
   ]);
   if (!key || !token) {
     trelloT.alert({
-      message: '⚠ Δεν έχεις ρυθμίσει API Key/Token. Πάτα στο πλακίδιο του Power-Up στο board → Edit Power-Up → Settings.',
-      duration: 6
+      message: '⚠ Δεν έχεις ρυθμίσει API Key/Token. Άνοιξε Ρυθμίσεις του Power-Up και πάτησε "Αποθήκευση".',
+      duration: 7
     });
+    console.warn('[Pareas] creds missing: key=', !!key, 'token=', !!token);
     return;
   }
+  console.info('[Pareas] creds loaded, attaching to card', (await resolveCardId()));
 
   const d = currentData;
   const cardId = await resolveCardId();
