@@ -138,12 +138,25 @@
     //  Not required but avoids confused-UI in some Trello clients.
     // ------------------------------------------------------------------
     'authorization-status': function (t, opts) {
-      return t.loadSecret('trello_token').then(function (tok) {
+      return t.get('member','private','trello_token').then(function (tok) {
         return { authorized: !!tok };
       }).catch(function () { return { authorized: false }; });
     },
 
+    // Trello calls this when the user needs to authorize (e.g. before attaching).
+    // It opens our settings popup so the user can paste API Key + Token.
     'show-authorization': function (t, opts) {
+      return t.popup({
+        title: 'Pareas Engagement — Settings',
+        url: BASE + 'settings.html',
+        height: 520
+      });
+    },
+
+    // Adds a "Settings" entry next to "Remove personal settings" / "Disable"
+    // in the Power-Up's gear menu on the board. This is the user-facing
+    // entry point for pasting API Key and Token.
+    'show-settings': function (t, opts) {
       return t.popup({
         title: 'Pareas Engagement — Settings',
         url: BASE + 'settings.html',
